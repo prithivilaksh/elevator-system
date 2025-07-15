@@ -1,14 +1,10 @@
 package internal
 
-type elevatorGroup struct {
-	elevators    []*elevator
-	totFloors  int
-	reqsChnl chan request
-}
 
-type request struct {
-	from int
-	to   int
+
+type Request struct {
+	From int
+	To   int
 }
 
 type disAEle struct {
@@ -17,7 +13,7 @@ type disAEle struct {
 }
 
 type floorAStop struct {
-	floor int
+	floor   int
 	isAStop bool
 }
 

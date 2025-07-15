@@ -5,78 +5,42 @@ import (
 	"sync"
 )
 
-func newElevatorGroup(totalFloors int) *elevatorGroup {
+type elevatorGroup struct {
+	elevators []*elevator
+	totFloors int
+	reqsChnl  chan Request
+}
+
+func NewElevatorGroup(totalFloors int, maxReqs int, totalElevators int) *elevatorGroup {
 	eg := &elevatorGroup{
-		elevators: make([]*elevator, totalFloors),
+		elevators: make([]*elevator, 0, totalElevators),
 		totFloors: totalFloors,
-		reqsChnl:  make(chan request, totalFloors),
+		reqsChnl:  make(chan Request, maxReqs),
 	}
 	return eg
 }
 
-func (eg *elevatorGroup) addElevator(ele *elevator) {
+func (eg *elevatorGroup) AddElevator(ele *elevator) {
 	eg.elevators = append(eg.elevators, ele)
 }
 
-func (eg *elevatorGroup) serve(req request) {
+func (eg *elevatorGroup) Serve(req Request) {
 	eg.reqsChnl <- req
 }
 
-func (eg *elevatorGroup) findDistance(ele *elevator, req request, disAEleChnl chan<- disAEle) {
-	currFloor, from, to := ele.currFloor, req.from, req.to
-	stops := make([]int, len(ele.stops))
-	copy(stops, ele.stops)
-
-	prev := currFloor
-	for i := 0; i < len(stops); i++ {
-		if (prev <= from && from <= stops[i]) || (prev >= from && from >= stops[i]) {
-			prev = from
-			if from != stops[i] {
-				stops = slices.Insert(stops, i, from)
-			}
-			break
-		}
-	}
-
-	if len(stops) == 0 {
-		stops = append(stops, from)
-	}
-	for i := prev + 1; i < len(stops); i++ {
-		if (prev <= to && to <= stops[i]) || (prev >= to && to >= stops[i]) {
-			if to != stops[i] {
-				stops = slices.Insert(stops, i, to)
-			}
-			break
-		}
-	}
-
-	if len(stops) == 1 {
-		stops = append(stops, to)
-	}
-
-	dis := 0
-	prev = currFloor
-	for i := 0; i < len(stops)-1; i++ {
-		dis += Abs(stops[i] - prev)
-		prev = stops[i]
-	}
-
-	disAEleChnl <- disAEle{
-		dis: dis,
-		ele: ele,
-	}
-
-}
-
-func (eg *elevatorGroup) SelectBestAndAdd(req request) {
+func (eg *elevatorGroup) selectBestAndAdd(req Request) {
 
 	disAEleChnl := make(chan disAEle, eg.totFloors)
 	var wg sync.WaitGroup
 	for _, ele := range eg.elevators {
 		wg.Add(1)
 		go func() {
+			ele.mu.Lock()
+			defer ele.mu.Unlock()
 			defer wg.Done()
-			eg.findDistance(ele, req, disAEleChnl)
+			stops := ele.insertFromTo(req.From, req.To)
+			dis := ele.findDistance(stops)
+			disAEleChnl <- disAEle{dis: dis, ele: ele}
 		}()
 	}
 
@@ -109,21 +73,28 @@ func (eg *elevatorGroup) SelectBestAndAdd(req request) {
 	}
 
 	if !isAdded {
-		// If no elevator can take the request, we can either log it or handle it differently.
-		// For now, we will just print a message.
-		println("No elevator available to serve the request from", req.from, "to", req.to)
-		eg.serve(req)
+		println("No elevator available to serve the request from", req.From, "to", req.To)
+		eg.Serve(req)
 	}
 
 }
 
+func (eg *elevatorGroup) processReqs() {
+	for req := range eg.reqsChnl {
+		go eg.selectBestAndAdd(req)
+	}
+}
 
-
-func (eg *elevatorGroup) start() {
+func (eg *elevatorGroup) Start() {
 	for _, ele := range eg.elevators {
 		go ele.start()
 	}
-	for req := range eg.reqsChnl {
-		go eg.SelectBestAndAdd(req)
+	go eg.processReqs()
+}
+
+func (eg *elevatorGroup) Stop() {
+	close(eg.reqsChnl)
+	for _, elevator := range eg.elevators {
+		elevator.Stop()
 	}
 }
