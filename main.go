@@ -46,6 +46,7 @@ func main() {
 	// elevatorGroup.Serve(internal.Request{From: 8, To: 7})
 	// elevatorGroup.Serve(internal.Request{From: 9, To: 4})
 
+	
 	// time.Sleep(20 * time.Second) // Allow some time for the elevators to process requests
 	sigChan := make(chan os.Signal, 1)
 

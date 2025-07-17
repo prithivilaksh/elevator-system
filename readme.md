@@ -11,3 +11,55 @@
 7. No buttons inside the lift.
 9. To simulate elevator movement add a delay of Y seconds to move from floor a to a+1 or vice versa
 
+
+
+
+# Elevator Group
+
+### Creates a new elevator group
+NewElevatorGroup(totalFloors int, maxReqs int, totalElevators int) *elevatorGroup
+
+### Adds an elevator to the group
+AddElevator(ele *elevator)
+
+### Accepts requests and sends to reqs channel
+Request(from,to int)
+
+### Reads requests from reqs channel and processes them in a separate go routine
+ProcessRequests()
+
+### Selects the best elevator and assigns the request to it
+SelectBestAndAssign()
+
+### Start
+Start()
+
+
+
+
+# Elevator
+
+### Creates a new elevator
+NewElevator(name string, totalFloors int) *elevator
+
+### Returns a deep copy of stops
+GetStopsCopy() []int
+
+### Inserts a request(from,to) to the copy of stops
+AddStopsToCopy(from, to int, stops []int ) []int
+
+### Finds the distance between stops and also the current floor
+FindDistance(stops []int) int
+
+### Gets the current floor
+GetCurrFloor() int
+
+### Adds stops to the elevator
+AddStops()
+
+### Start
+Start()
+
+
+### Move
+Move(to int)
