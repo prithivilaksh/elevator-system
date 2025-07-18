@@ -31,7 +31,7 @@ ProcessRequests()
 ### Selects the best elevator and assigns the request to it
 SelectBestAndAssign()
 
-### Start
+### Start - Entry point
 Start()
 
 
@@ -42,24 +42,27 @@ Start()
 ### Creates a new elevator
 NewElevator(name string, totalFloors int) *elevator
 
-### Returns a deep copy of stops
-GetStopsCopy() []int
+### Returns a deep copy of stops and current floor
+GetStopsAndCurrFloor() []int, int
 
 ### Inserts a request(from,to) to the copy of stops
-AddStopsToCopy(from, to int, stops []int ) []int
+AddStopsAndGet(from, to , currFloor int, stops []int ) []int
 
 ### Finds the distance between stops and also the current floor
-FindDistance(stops []int) int
+FindDistance(stops []int, currFloor int) int
 
-### Gets the current floor
-GetCurrFloor() int
 
-### Adds stops to the elevator
-AddStops()
+<!-- ### Gets the current floor
+GetCurrFloor() int -->
 
-### Start
+### Move - Moves the elevator to the destination
+Move(to int)
+
+### Manages the state of the elevator
+ManageState()
+
+
+### Start - Entry point
 Start()
 
 
-### Move
-Move(to int)

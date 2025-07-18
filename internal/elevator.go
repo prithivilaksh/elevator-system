@@ -4,112 +4,40 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
-	"sync"
 	"time"
 )
 
 type elevator struct {
 	name         string
-	isOpen       bool
-	floorsChnl   chan floorAStop
-	readyForNext chan bool
 	currFloor    int
-
-	mu    sync.Mutex
 	stops []int
+	readyForNextChnl chan bool
+	getStopsAndCurrFloorChnl chan chan stopsAndCurrFloor
+	tryAddStopsChnl chan fromToIsAdded
 }
 
 func NewElevator(name string, totalFloors int) *elevator {
 	return &elevator{
 		name:         name,
-		isOpen:       false,
-		floorsChnl:   make(chan floorAStop, totalFloors*2),
-		readyForNext: make(chan bool, totalFloors*2),
 		currFloor:    0,
 		stops:        []int{},
+		getStopsAndCurrFloorChnl: make(chan chan stopsAndCurrFloor, totalFloors*2),
+		tryAddStopsChnl: make(chan fromToIsAdded, totalFloors*2),
+		readyForNextChnl: make(chan bool, totalFloors*2),
 	}
 }
 
 func (ele *elevator) openClose() {
-	ele.isOpen = true
 	fmt.Println("Elevator " + ele.name + " is opening doors")
 	time.Sleep(5 * time.Second)
 	fmt.Println("Elevator " + ele.name + " is closing doors")
-	ele.isOpen = false
 }
 
-func (ele *elevator) sendFloors() {
-	for range ele.readyForNext {
-		fmt.Println("Elevator " + ele.name + " is processing request")
 
-		if ele.currFloor == ele.stops[0] {
-			stop, err := ele.popStops()
-			if !err {
-				ele.floorsChnl <- floorAStop{floor: stop, isAStop: true}
-			}
-		}
-
-		if len(ele.stops) == 0 {
-			fmt.Println("Elevator", ele.name, "has no stops to make so it is stopping")
-			break
-		}
-		if ele.currFloor < ele.stops[0] {
-			ele.floorsChnl <- floorAStop{floor: ele.currFloor + 1, isAStop: false}
-		} else if ele.currFloor > ele.stops[0] {
-			ele.floorsChnl <- floorAStop{floor: ele.currFloor - 1, isAStop: false}
-		} else {
-			fmt.Println(ele.stops)
-			panic("Elevator " + ele.name + " has no stops to make " + strconv.Itoa(ele.currFloor))
-		}
-	}
-}
-
-func (ele *elevator) start() {
-	fmt.Println("Elevator " + ele.name + " started")
-	ele.readyForNext <- true
-	fmt.Println("Elevator " + ele.name + " is ready for next request")
-	for floorStop := range ele.floorsChnl {
-		fmt.Println("Elevator "+ele.name+" received floor stop request for floor", floorStop.floor)
-		to := floorStop.floor
-		isAStop := floorStop.isAStop
-
-		if ele.currFloor != to {
-			ele.mu.Lock()
-			ele.currFloor = -1
-			time.Sleep(5 * time.Second) // Simulate time taken to reach the floor
-			ele.currFloor = to
-			ele.mu.Unlock()
-		}
-
-		fmt.Println("Elevator "+ele.name+" reached floor ", ele.currFloor)
-
-		if isAStop {
-			ele.openClose()
-		}
-		ele.readyForNext <- true
-	}
-}
-
-func (ele *elevator) popStops() (int, bool) {
-	ele.mu.Lock()
-	defer ele.mu.Unlock()
-
-	if len(ele.stops) == 0 {
-		return 0, true
-	}
-
-	stop := ele.stops[0]
-	ele.stops = ele.stops[1:]
-	return stop, false
-}
-
-func (ele *elevator) insertFromTo(from int, to int) []int {
-
-	stops := make([]int, len(ele.stops))
-	copy(stops, ele.stops)
+func (ele *elevator) AddStopsAndGet(from, to int, currFloor int, stops []int ) []int {
 
 	nextInd := 0
-	prev := ele.currFloor
+	prev := currFloor
 	inserted := false
 	for i := 0; i < len(stops); i++ {
 		if (prev <= from && from <= stops[i]) || (prev >= from && from >= stops[i]) {
@@ -145,8 +73,9 @@ func (ele *elevator) insertFromTo(from int, to int) []int {
 	return stops
 }
 
-func (ele *elevator) findDistance(stops []int) int {
-	prev, dis := ele.currFloor, 0
+
+func (ele *elevator) findDistance(stops []int, currFloor int) int {
+	prev, dis := currFloor, 0
 	for i := 0; i < len(stops); i++ {
 		dis += Abs(stops[i] - prev)
 		prev = stops[i]
@@ -154,27 +83,50 @@ func (ele *elevator) findDistance(stops []int) int {
 	return dis
 }
 
-func (ele *elevator) addStops(req Request, expDis int) bool {
-	ele.mu.Lock()
-	defer ele.mu.Unlock()
 
-	stops := ele.insertFromTo(req.From, req.To)
-	actDis := ele.findDistance(stops)
-	if Abs(actDis-expDis) > 4 {
-		fmt.Println("Elevator " + ele.name + " cannot take request from " + strconv.Itoa(req.From) + " to " + strconv.Itoa(req.To) + " as it will take " + strconv.Itoa(actDis) + " distance but expected " + strconv.Itoa(expDis))
-		return false
+func (ele *elevator) Move(to int, isAStop bool) {
+	time.Sleep(5 * time.Second)
+	fmt.Println("Elevator " + ele.name + " moved to floor " + strconv.Itoa(to))
+	if isAStop{
+		ele.openClose()
 	}
-
-	ele.stops = stops
-
-	if len(ele.stops) <= 2 {
-		go ele.sendFloors()
-	}
-	fmt.Println("Elevator " + ele.name + " added stops from " + strconv.Itoa(req.From) + " to " + strconv.Itoa(req.To) + " with expected distance " + strconv.Itoa(expDis))
-	return true
+	ele.readyForNextChnl <- true
 }
 
-func (ele *elevator) Stop() {
-	close(ele.floorsChnl)
-	close(ele.readyForNext)
+func (ele *elevator) Start() {
+	for {
+		select {
+		case chnl:=<-ele.getStopsAndCurrFloorChnl:
+			chnl <- stopsAndCurrFloor{stops: ele.stops, currFloor: ele.currFloor}
+		
+		case <-ele.readyForNextChnl:
+			isAStop := false
+			if len(ele.stops)==0{
+				continue
+			}
+			if Abs(ele.currFloor-ele.stops[0])<=1{
+				ele.currFloor=ele.stops[0]
+				ele.stops=ele.stops[1:]
+				isAStop=true
+			}else if ele.currFloor>ele.stops[0]{
+				ele.currFloor--
+			}else{
+				ele.currFloor++
+			}
+			go ele.Move(ele.currFloor, isAStop)
+		
+		case ins := <-ele.tryAddStopsChnl:
+			stops:=ele.AddStopsAndGet(ins.from, ins.to, ele.currFloor, ele.stops)
+			dis:=ele.findDistance(stops, ele.currFloor)
+			if Abs(ins.dis-dis)<=2{
+				ele.stops=stops
+				ins.isAdded <- true	
+				if len(ele.readyForNextChnl)==0{
+					ele.readyForNextChnl <- true
+				}
+			}else{
+				ins.isAdded <- false
+			}
+		}
+	}
 }

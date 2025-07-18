@@ -2,9 +2,11 @@ package internal
 
 
 
-type Request struct {
-	From int
-	To   int
+type fromToIsAdded struct {
+	from int
+	to   int
+	dis int
+	isAdded chan bool
 }
 
 type disAEle struct {
@@ -15,6 +17,11 @@ type disAEle struct {
 type floorAStop struct {
 	floor   int
 	isAStop bool
+}
+
+type stopsAndCurrFloor struct {
+	stops   []int
+	currFloor int
 }
 
 func Abs[T int | float32 | float64](x T) T {
