@@ -1,10 +1,12 @@
-package internal
+package main
 
-
-
-type fromToIsAdded struct {
+type fromTo struct {
 	from int
 	to   int
+}
+
+type fromToIsAdded struct {
+	fromTo
 	dis int
 	isAdded chan bool
 }
@@ -12,11 +14,6 @@ type fromToIsAdded struct {
 type disAEle struct {
 	dis int
 	ele *elevator
-}
-
-type floorAStop struct {
-	floor   int
-	isAStop bool
 }
 
 type stopsAndCurrFloor struct {
