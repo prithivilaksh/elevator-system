@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/prithivilaksh/elevator-system/utils"
 	. "github.com/prithivilaksh/elevator-system/types"
+	. "github.com/prithivilaksh/elevator-system/utils"
 )
 
 type FromToDisIsAdded struct {
@@ -36,16 +36,16 @@ func NewElevator(name string, totalFloors int) *elevator {
 		tryAddStopsChnl:          make(chan FromToDisIsAdded, totalFloors*2),
 		readyForNextChnl:         make(chan bool, totalFloors*2),
 	}
-	go ele.Start()
+	go ele.start()
 	return ele
 }
 
-func (ele *elevator) AddStopAndGetNextInd(startInd, prev, stop int, stops []int) ([]int, int) {
+func (ele *elevator) AddStopAndGetNextInd(startInd, afterFloor, stop int, stops []int) ([]int, int) {
 
 	nextStartInd := 0
 	inserted := false
 	for i := startInd; i < len(stops); i++ {
-		if (prev <= stop && stop <= stops[i]) || (prev >= stop && stop >= stops[i]) {
+		if (afterFloor <= stop && stop <= stops[i]) || (afterFloor >= stop && stop >= stops[i]) {
 			if stop != stops[i] {
 				stops = slices.Insert(stops, i, stop)
 			}
@@ -63,14 +63,12 @@ func (ele *elevator) AddStopAndGetNextInd(startInd, prev, stop int, stops []int)
 	return stops, nextStartInd
 }
 
-func (ele *elevator) FindDistance(stops []int, prev int, lastInd int) int {
-	// tmp:=prev
-	dis := 0
+func (ele *elevator) FindDistance(stops []int, currFloor int, lastInd int) int {
+	prev, dis := currFloor, 0
 	for i := range lastInd {
 		dis += Abs(stops[i] - prev)
 		prev = stops[i]
 	}
-	// fmt.Println("prev", tmp, "stops", stops, "dis", dis, "lastInd", lastInd)
 	return dis
 }
 
@@ -99,13 +97,13 @@ func (ele *elevator) tryAddStops(req FromToDisIsAdded) {
 	stops, nextStartInd = ele.AddStopAndGetNextInd(nextStartInd, req.From, req.To, stops)
 	dis := ele.FindDistance(stops, ele.currFloor, nextStartInd)
 	if Abs(req.dis-dis) <= 2 {
-		fmt.Println("Request from", req.From, "to", req.To, "assigned to elevator", ele.name, "with distance", dis, "and current distance", req.dis, "stops before", ele.stops, " current floor", ele.currFloor, " stops after", stops)
+		fmt.Println("Request from", req.From, "to", req.To, "assigned to elevator", ele.name, "with expected distance", dis, "and actual distance", req.dis, " current floor", ele.currFloor, "stops before", ele.stops, " stops after", stops)
 		ele.stops = stops
 		isAdded = true
 		if ele.isIdle {
 			ele.readyForNextChnl <- true
 			ele.isIdle = false
-			fmt.Println("Elevator " + ele.name + " started")
+			fmt.Println("Elevator " + ele.name + " started from floor " + strconv.Itoa(ele.currFloor))
 		}
 	}
 	req.isAddedChnl <- isAdded
@@ -142,7 +140,7 @@ func (ele *elevator) moveToNextFloor() {
 
 }
 
-func (ele *elevator) Start() {
+func (ele *elevator) start() {
 	defer close(ele.readyForNextChnl)
 	defer close(ele.getStopsAndCurrFloorChnl)
 	defer close(ele.tryAddStopsChnl)
