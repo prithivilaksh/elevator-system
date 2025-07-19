@@ -1,3 +1,3 @@
-module github.com/prithivilaksh/elevator-group
+module github.com/prithivilaksh/elevator-system
 
 go 1.24.2

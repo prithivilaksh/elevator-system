@@ -5,6 +5,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	ele "github.com/prithivilaksh/elevator-system/elevator"
+	eg "github.com/prithivilaksh/elevator-system/elevatorGroup"
+	types "github.com/prithivilaksh/elevator-system/types"
 )
 
 func main() {
@@ -13,13 +17,13 @@ func main() {
 	totalFloors := 10
 	totalElevators := 4
 
-	var elevators []*elevator
+	var elevators []types.Elevator
 	for i := range totalElevators {
-		elevator := NewElevator(fmt.Sprintf("Elevator-%d", i+1), totalFloors)
+		elevator := ele.NewElevator(fmt.Sprintf("Elevator-%d", i+1), totalFloors)
 		elevators = append(elevators, elevator)
 	}
 
-	elevatorGroup := NewElevatorGroup(totalFloors, elevators)
+	elevatorGroup := eg.NewElevatorGroup(totalFloors, elevators)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)

@@ -1,11 +1,20 @@
-package main
+package elevator
 
 import (
 	"fmt"
 	"slices"
 	"strconv"
 	"time"
+
+	. "github.com/prithivilaksh/elevator-system/utils"
+	. "github.com/prithivilaksh/elevator-system/types"
 )
+
+type FromToDisIsAdded struct {
+	FromTo
+	dis         int
+	isAddedChnl chan bool
+}
 
 type elevator struct {
 	name                     string
@@ -13,8 +22,8 @@ type elevator struct {
 	isIdle                   bool
 	stops                    []int
 	readyForNextChnl         chan bool
-	getStopsAndCurrFloorChnl chan (chan stopsACurrFloor)
-	tryAddStopsChnl          chan fromToDisIsAdded
+	getStopsAndCurrFloorChnl chan (chan StopsACurrFloor)
+	tryAddStopsChnl          chan FromToDisIsAdded
 }
 
 func NewElevator(name string, totalFloors int) *elevator {
@@ -23,15 +32,15 @@ func NewElevator(name string, totalFloors int) *elevator {
 		currFloor:                0,
 		isIdle:                   true,
 		stops:                    make([]int, 0, totalFloors*2),
-		getStopsAndCurrFloorChnl: make(chan (chan stopsACurrFloor), totalFloors*2),
-		tryAddStopsChnl:          make(chan fromToDisIsAdded, totalFloors*2),
+		getStopsAndCurrFloorChnl: make(chan (chan StopsACurrFloor), totalFloors*2),
+		tryAddStopsChnl:          make(chan FromToDisIsAdded, totalFloors*2),
 		readyForNextChnl:         make(chan bool, totalFloors*2),
 	}
 	go ele.Start()
 	return ele
 }
 
-func (ele *elevator) AddStopAndGet(startInd, prev, stop int, stops []int) ([]int, int) {
+func (ele *elevator) AddStopAndGetNextInd(startInd, prev, stop int, stops []int) ([]int, int) {
 
 	nextStartInd := 0
 	inserted := false
@@ -65,32 +74,32 @@ func (ele *elevator) FindDistance(stops []int, prev int, lastInd int) int {
 	return dis
 }
 
-func (ele *elevator) GetStopsAndCurrFloor() stopsACurrFloor {
-	stopsAndCurrFloorChnl := make(chan stopsACurrFloor)
+func (ele *elevator) GetStopsAndCurrFloor() StopsACurrFloor {
+	stopsAndCurrFloorChnl := make(chan StopsACurrFloor)
 	defer close(stopsAndCurrFloorChnl)
 	ele.getStopsAndCurrFloorChnl <- stopsAndCurrFloorChnl
 	return <-stopsAndCurrFloorChnl
 }
 
-func (ele *elevator) getStopsAndCurrFloor(stopsAndCurrFloorChnl chan stopsACurrFloor) {
+func (ele *elevator) getStopsAndCurrFloor(stopsAndCurrFloorChnl chan StopsACurrFloor) {
 	stops := DeepCopy(ele.stops)
-	stopsAndCurrFloorChnl <- stopsACurrFloor{stops: stops, currFloor: ele.currFloor}
+	stopsAndCurrFloorChnl <- StopsACurrFloor{Stops: stops, CurrFloor: ele.currFloor}
 }
 
-func (ele *elevator) TryAddStops(req fromTo, dis int) bool {
+func (ele *elevator) TryAddStops(req FromTo, dis int) bool {
 	isAddedChnl := make(chan bool)
 	defer close(isAddedChnl)
-	ele.tryAddStopsChnl <- fromToDisIsAdded{fromTo: req, dis: dis, isAddedChnl: isAddedChnl}
+	ele.tryAddStopsChnl <- FromToDisIsAdded{FromTo: req, dis: dis, isAddedChnl: isAddedChnl}
 	return <-isAddedChnl
 }
 
-func (ele *elevator) tryAddStops(req fromToDisIsAdded) {
+func (ele *elevator) tryAddStops(req FromToDisIsAdded) {
 	stops, isAdded, nextStartInd := DeepCopy(ele.stops), false, 0
-	stops, nextStartInd = ele.AddStopAndGet(nextStartInd, ele.currFloor, req.from, stops)
-	stops, nextStartInd = ele.AddStopAndGet(nextStartInd, req.from, req.to, stops)
+	stops, nextStartInd = ele.AddStopAndGetNextInd(nextStartInd, ele.currFloor, req.From, stops)
+	stops, nextStartInd = ele.AddStopAndGetNextInd(nextStartInd, req.From, req.To, stops)
 	dis := ele.FindDistance(stops, ele.currFloor, nextStartInd)
 	if Abs(req.dis-dis) <= 2 {
-		fmt.Println("Request from", req.from, "to", req.to, "assigned to elevator", ele.name, "with distance", dis, "and current distance", req.dis, "stops before", ele.stops, " current floor", ele.currFloor, " stops after", stops)
+		fmt.Println("Request from", req.From, "to", req.To, "assigned to elevator", ele.name, "with distance", dis, "and current distance", req.dis, "stops before", ele.stops, " current floor", ele.currFloor, " stops after", stops)
 		ele.stops = stops
 		isAdded = true
 		if ele.isIdle {
