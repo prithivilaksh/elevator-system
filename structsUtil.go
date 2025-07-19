@@ -5,10 +5,10 @@ type fromTo struct {
 	to   int
 }
 
-type fromToIsAdded struct {
+type fromToDisIsAdded struct {
 	fromTo
-	dis int
-	isAdded chan bool
+	dis     int
+	isAddedChnl chan bool
 }
 
 type disAEle struct {
@@ -16,8 +16,8 @@ type disAEle struct {
 	ele *elevator
 }
 
-type stopsAndCurrFloor struct {
-	stops   []int
+type stopsACurrFloor struct {
+	stops     []int
 	currFloor int
 }
 
@@ -26,4 +26,10 @@ func Abs[T int | float32 | float64](x T) T {
 		return -x
 	}
 	return x
+}
+
+func DeepCopy[T any](src []T) []T {
+	dest := make([]T, len(src))
+	copy(dest, src)
+	return dest
 }

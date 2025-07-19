@@ -13,14 +13,13 @@ func main() {
 	totalFloors := 10
 	totalElevators := 4
 
-	elevatorGroup := NewElevatorGroup(totalFloors, totalElevators)
-
+	var elevators []*elevator
 	for i := range totalElevators {
 		elevator := NewElevator(fmt.Sprintf("Elevator-%d", i+1), totalFloors)
-		elevatorGroup.AddElevator(elevator)
+		elevators = append(elevators, elevator)
 	}
 
-	go elevatorGroup.Start()
+	elevatorGroup := NewElevatorGroup(totalFloors, elevators)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -69,6 +68,6 @@ func main() {
 	go elevatorGroup.Serve(9, 4)
 
 	<-sigChan
-	fmt.Println("\nTermination signal received. Exiting gracefully.")
 
+	fmt.Println("\nTermination signal received. Exiting gracefully.")
 }
