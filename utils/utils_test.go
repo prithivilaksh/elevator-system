@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-type testCase[T number] struct {
+type AbsTestCase[T number] struct {
 	name  string
 	input T
 	want  T
@@ -13,7 +13,7 @@ type testCase[T number] struct {
 
 func TestAbs(t *testing.T) {
 	t.Run("with int", func(t *testing.T) {
-		tests := []testCase[int]{
+		tests := []AbsTestCase[int]{
 			{"positive number", 1, 1},
 			{"negative number", -1, 1},
 			{"zero", 0, 0},
@@ -22,7 +22,7 @@ func TestAbs(t *testing.T) {
 	})
 
 	t.Run("with float64", func(t *testing.T) {
-		tests := []testCase[float64]{
+		tests := []AbsTestCase[float64]{
 			{"positive float", 3.5, 3.5},
 			{"negative float", -2.75, 2.75},
 			{"float zero", 0.0, 0.0},
@@ -31,7 +31,7 @@ func TestAbs(t *testing.T) {
 	})
 
 	t.Run("with int64", func(t *testing.T) {
-		tests := []testCase[int64]{
+		tests := []AbsTestCase[int64]{
 			{"positive int64", 100, 100},
 			{"negative int64", -200, 200},
 		}
@@ -39,7 +39,7 @@ func TestAbs(t *testing.T) {
 	})
 }
 
-func runTests[T number](t *testing.T, tests []testCase[T]) {
+func runTests[T number](t *testing.T, tests []AbsTestCase[T]) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := Abs(tt.input); got != tt.want {
@@ -49,14 +49,16 @@ func runTests[T number](t *testing.T, tests []testCase[T]) {
 	}
 }
 
+type DeepCopyTestCase struct {
+	name  string
+	input []int
+	want  []int
+}
+
 func TestDeepCopy(t *testing.T) {
-	type testCase struct {
-		name  string
-		input []int
-		want  []int
-	}
+
 	same := []int{1, 2}
-	tests := []testCase{
+	tests := []DeepCopyTestCase{
 		{"empty slice", []int{}, []int{}},
 		{"slice with one element", []int{1}, []int{1}},
 		{"slice with multiple elements", []int{1, 2, 3}, []int{1, 2, 3}},
