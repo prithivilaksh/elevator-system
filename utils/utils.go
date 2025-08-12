@@ -11,7 +11,7 @@ func Abs[T number](x T) T {
 	return x
 }
 
-func DeepCopy[T any](src []T) []T {
+func Copy[T any](src []T) []T {
 	dest := make([]T, len(src))
 	copy(dest, src)
 	return dest

@@ -6,72 +6,44 @@ import (
 	"os/signal"
 	"syscall"
 
-	ele "github.com/prithivilaksh/elevator-system/elevator"
-	eg "github.com/prithivilaksh/elevator-system/elevatorGroup"
-	types "github.com/prithivilaksh/elevator-system/types"
+	"github.com/prithivilaksh/elevator-system/elevator"
+	"github.com/prithivilaksh/elevator-system/elevatorgroup"
 )
 
 func main() {
-	fmt.Println("Elevator Group Simulation Started")
+	metricElevatorGroup := elevatorgroup.NewMetricElevatorGroup()
 
-	totalFloors := 10
-	totalElevators := 4
-
-	var elevators []types.Elevator
-	for i := range totalElevators {
-		elevator := ele.NewElevator(fmt.Sprintf("Elevator-%d", i+1), totalFloors)
-		elevators = append(elevators, elevator)
+	for i := 1; i <= 4; i++ {
+		metricElevatorGroup.AddElevator(elevator.NewLeastDisElevator(i))
 	}
-
-	elevatorGroup := eg.NewElevatorGroup(totalFloors, elevators)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	fmt.Println("Running... Press Ctrl+C to stop")
 
-	go elevatorGroup.Serve(0, 9)
-	go elevatorGroup.Serve(5, 8)
-	go elevatorGroup.Serve(3, 5)
-	go elevatorGroup.Serve(4, 6)
-	go elevatorGroup.Serve(5, 1)
-	go elevatorGroup.Serve(6, 3)
-	go elevatorGroup.Serve(7, 8)
-	go elevatorGroup.Serve(8, 0)
-	go elevatorGroup.Serve(9, 7)
-	go elevatorGroup.Serve(0, 2)
-	go elevatorGroup.Serve(1, 9)
-	go elevatorGroup.Serve(2, 5)
-	go elevatorGroup.Serve(3, 6)
-	go elevatorGroup.Serve(4, 1)
-	go elevatorGroup.Serve(5, 3)
-	go elevatorGroup.Serve(6, 8)
-	go elevatorGroup.Serve(7, 0)
-	go elevatorGroup.Serve(8, 7)
-	go elevatorGroup.Serve(9, 4)
+	go metricElevatorGroup.GetElevatorID(1, 10)
+	go metricElevatorGroup.GetElevatorID(4, 9)
+	go metricElevatorGroup.GetElevatorID(7, 3)
+	go metricElevatorGroup.GetElevatorID(2, 6)
+	go metricElevatorGroup.GetElevatorID(5, 8)
+	go metricElevatorGroup.GetElevatorID(8, 2)
+	go metricElevatorGroup.GetElevatorID(1, 3)
+	go metricElevatorGroup.GetElevatorID(5, 10)
+	go metricElevatorGroup.GetElevatorID(2, 4)
+	go metricElevatorGroup.GetElevatorID(4, 10)
+	go metricElevatorGroup.GetElevatorID(10, 2)
+	go metricElevatorGroup.GetElevatorID(2, 1)
+	go metricElevatorGroup.GetElevatorID(1, 4)
+	go metricElevatorGroup.GetElevatorID(9, 10)
+	go metricElevatorGroup.GetElevatorID(3, 9)
+	go metricElevatorGroup.GetElevatorID(5, 3)
+	go metricElevatorGroup.GetElevatorID(7, 8)
+	go metricElevatorGroup.GetElevatorID(3, 10)
+	go metricElevatorGroup.GetElevatorID(4, 6)
+	go metricElevatorGroup.GetElevatorID(5, 4)
+	go metricElevatorGroup.GetElevatorID(2, 9)
+	go metricElevatorGroup.GetElevatorID(4, 9)
 
 	<-sigChan
-
-	go elevatorGroup.Serve(7, 8)
-	go elevatorGroup.Serve(0, 9)
-	go elevatorGroup.Serve(5, 8)
-	go elevatorGroup.Serve(2, 5)
-	go elevatorGroup.Serve(4, 1)
-	go elevatorGroup.Serve(3, 5)
-	go elevatorGroup.Serve(6, 3)
-	go elevatorGroup.Serve(8, 0)
-	go elevatorGroup.Serve(0, 2)
-	go elevatorGroup.Serve(1, 9)
-	go elevatorGroup.Serve(3, 6)
-	go elevatorGroup.Serve(5, 3)
-	go elevatorGroup.Serve(4, 6)
-	go elevatorGroup.Serve(6, 8)
-	go elevatorGroup.Serve(7, 0)
-	go elevatorGroup.Serve(5, 1)
-	go elevatorGroup.Serve(8, 7)
-	go elevatorGroup.Serve(9, 7)
-	go elevatorGroup.Serve(9, 4)
-
-	<-sigChan
-
-	fmt.Println("\nTermination signal received. Exiting gracefully.")
+	fmt.Println("Shutting down...")
 }
