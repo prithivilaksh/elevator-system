@@ -1,7 +1,7 @@
 package elevator
 
 import (
-	"fmt"
+	// "fmt"
 	"slices"
 	"sync"
 	"time"
@@ -82,7 +82,7 @@ func (e *LeastDisElevator) TryAddStops(from, to, expMetric, threshold int) bool 
 	stops, actDis := addStopsAndFindDistance(from, to, currFloor, stops)
 
 	if utils.Abs(actDis-expMetric) <= threshold {
-		fmt.Println("elevator ", e.id, " added stops from ", from, " to ", to, " actual metric ", actDis, " expected metric ", expMetric, " before stops ", e.stops, " after stops ", stops)
+		// fmt.Println("elevator ", e.id, " added stops from ", from, " to ", to, " actual metric ", actDis, " expected metric ", expMetric, " before stops ", e.stops, " after stops ", stops)
 		e.stops = stops
 		if e.isIdle {
 			e.isIdle = false
@@ -110,7 +110,7 @@ func (e *LeastDisElevator) Simulate() {
 			e.isIdle = true
 			e.mu.Unlock()
 
-			fmt.Println("elevator ", e.id, " is idle", e.stops)
+			// fmt.Println("elevator ", e.id, " is idle", e.stops)
 			break
 		}
 		if utils.Abs(e.currFloor-e.stops[0]) <= 1 {
@@ -128,6 +128,6 @@ func (e *LeastDisElevator) Simulate() {
 		}
 		e.mu.Unlock()
 		time.Sleep(2 * time.Second)
-		fmt.Println("elevator ", e.id, "Current Floor", e.currFloor)
+		// fmt.Println("elevator ", e.id, "Current Floor", e.currFloor)
 	}
 }

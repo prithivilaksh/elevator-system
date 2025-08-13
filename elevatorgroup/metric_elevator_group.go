@@ -45,6 +45,7 @@ func (eg *MetricElevatorGroup) GetElevatorID(from int, to int) (int, error) {
 		expMetric := metricElevator.metric
 		ele := metricElevator.ele
 		if ele.TryAddStops(from, to, expMetric, 4) {
+			// fmt.Println("elevator ", ele.GetID(), " added stops from ", from, " to ", to)
 			return ele.GetID(), nil
 		}
 	}
